@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Luck Jingle Printer</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    canvas {
+      border: 1px solid #ccc;
+      max-width: 100%;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+
+    .success {
+      background: #e6ffe6;
+    }
+
+    .error {
+      background: #ffe6e6;
+    }
+
+    #debug {
+      font-family: monospace;
+      white-space: pre-wrap;
+      background: #f5f5f5;
+      padding: 10px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Luck Jingle Printer</h1>
+    <div>
+      <input type="file" id="imageInput" accept="image/*">
+      <button id="connectBtn">Connect Printer</button>
+      <button id="printBtn" disabled>Print Image</button>
+    </div>
+    <canvas id="preview"></canvas>
+    <div id="status"></div>
+    <div id="debug"></div>
+  </div>
+
+  <script>
+    const PRINTER_SERVICE = "0000ff00-0000-1000-8000-00805f9b34fb";
+    const WRITE_CHARACTERISTIC = "0000ff02-0000-1000-8000-00805f9b34fb";
+    const NOTIFY_CHARACTERISTIC = "0000ff01-0000-1000-8000-00805f9b34fb";
+    const WIDTH = 384;
+
+    let device, characteristic;
+    let imageData = '';
+
+    // UI Elements
+    const canvas = document.getElementById('preview');
+    const ctx = canvas.getContext('2d');
+    const imageInput = document.getElementById('imageInput');
+    const connectBtn = document.getElementById('connectBtn');
+    const printBtn = document.getElementById('printBtn');
+    const status = document.getElementById('status');
+    const debug = document.getElementById('debug');
+
+    function showStatus(message, isError = false) {
+      status.textContent = message;
+      status.className = isError ? 'error' : 'success';
+    }
+
+    function log(message) {
+      debug.textContent += message + '\n';
+      console.log(message);
+    }
+
+    async function connectPrinter() {
+      try {
+        debug.textContent = ''; // Clear debug log
+        log('Requesting Bluetooth Device...');
+
+        device = await navigator.bluetooth.requestDevice({
+          filters: [
+            { namePrefix: 'LuckP_D1' },
+            { namePrefix: 'DP_D1' },
+          ],
+          optionalServices: [PRINTER_SERVICE]
+        });
+
+        log('Device selected. Connecting to GATT Server...');
+        const server = await device.gatt.connect();
+
+        log('Connected. Getting Services...');
+        const services = await server.getPrimaryServices();
+        log(`Found ${services.length} services:`);
+
+        for (const service of services) {
+          log(`> Service: ${service.uuid}`);
+          const characteristics = await service.getCharacteristics();
+
+          log(`>> Found ${characteristics.length} characteristics:`);
+          for (const char of characteristics) {
+            log(`>> Characteristic: ${char.uuid}`);
+
+            // Find our target characteristic
+            if (char.uuid.toLowerCase() === WRITE_CHARACTERISTIC.toLowerCase()) {
+              log('>> Found write characteristic!');
+              characteristic = char;
+            }
+          }
+        }
+
+        if (characteristic) {
+          printBtn.disabled = false;
+          showStatus('Printer connected successfully!');
+          log('Connection complete!');
+        } else {
+          throw new Error('Required characteristic not found');
+        }
+
+      } catch (error) {
+        showStatus('Connection failed: ' + error.message, true);
+        log('Error: ' + error.message);
+      }
+    }
+
+    function applyDither(imageData, width, height) {
+      const data = imageData.data;
+      const brightness = 0.35;
+      const contrast = Math.pow(1.45, 2);
+
+      // Apply brightness and contrast
+      for (let i = 0; i < data.length; i += 4) {
+        for (let j = 0; j < 3; j++) {
+          let value = data[i + j];
+          value += (brightness - 0.5) * 256;
+          value = (value - 128) * contrast + 128;
+          data[i + j] = Math.min(Math.max(value, 0), 255);
+        }
+      }
+
+      // Floyd-Steinberg dithering
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const idx = (y * width + x) * 4;
+          const oldPixel = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+          const newPixel = oldPixel < 128 ? 0 : 255;
+          const error = oldPixel - newPixel;
+
+          data[idx] = data[idx + 1] = data[idx + 2] = newPixel;
+
+          if (x < width - 1) {
+            distributeError(data, idx + 4, error * 7 / 16);
+          }
+          if (y < height - 1) {
+            if (x > 0) distributeError(data, idx + width * 4 - 4, error * 3 / 16);
+            distributeError(data, idx + width * 4, error * 5 / 16);
+            if (x < width - 1) distributeError(data, idx + width * 4 + 4, error * 1 / 16);
+          }
+        }
+      }
+
+      return imageData;
+    }
+
+    function distributeError(data, idx, error) {
+      for (let i = 0; i < 3; i++) {
+        data[idx + i] = Math.min(Math.max(data[idx + i] + error, 0), 255);
+      }
+    }
+
+    async function processImage(file) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const height = Math.floor(img.height * WIDTH / img.width);
+          canvas.width = WIDTH;
+          canvas.height = height;
+
+          // Draw and resize image
+          ctx.drawImage(img, 0, 0, WIDTH, height);
+
+          // Get image data and apply dithering
+          let imageData = ctx.getImageData(0, 0, WIDTH, height);
+          imageData = applyDither(imageData, WIDTH, height);
+          ctx.putImageData(imageData, 0, 0);
+
+          // Convert to binary string
+          let binStr = '1' + '0'.repeat(318); // Start bits
+          const data = imageData.data;
+
+          for (let i = 0; i < data.length; i += 4) {
+            const brightness = data[i] + data[i + 1] + data[i + 2];
+            binStr += brightness > 600 ? '0' : '1';
+          }
+
+          resolve(binStr);
+        };
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    async function sendToPrinter(hexData) {
+      try {
+        log('Starting print process...');
+
+        // Enable printer
+        log('Enabling printer...');
+        await characteristic.writeValue(new Uint8Array([0x10, 0xFF, 0x40]));
+        await characteristic.writeValue(new Uint8Array([0x10, 0xFF, 0xF1, 0x03]));
+
+        // Set density (high)
+        log('Setting density...');
+        const densityCommand = new Uint8Array([0x10, 0xFF, 0x10, 0x00, 0x02, 0x00]);
+        await characteristic.writeValue(densityCommand);
+
+        // Calculate length and send image data
+        const hexLen = Math.floor(hexData.length / 96) + 3;
+        const frontHex = (hexLen & 0xFF).toString(16).padStart(2, '0');
+        const endHex = ((hexLen >> 8) & 0xFF).toString(16).padStart(2, '0');
+
+        // Send data in chunks
+        log('Sending image data...');
+        const startCommand = `1D7630003000${frontHex}${endHex}`;
+        await characteristic.writeValue(hexStringToBytes(startCommand + hexData.slice(0, 224)));
+
+        for (let i = 224; i < hexData.length; i += 256) {
+          const chunk = hexData.slice(i, i + 256).padEnd(256, '0');
+          await characteristic.writeValue(hexStringToBytes(chunk));
+          await new Promise(resolve => setTimeout(resolve, 35));
+          log(`Sent chunk ${Math.floor(i / hexData.length * 100)}%`);
+        }
+
+        // End command
+        log('Sending end command...');
+        await characteristic.writeValue(hexStringToBytes('1B4A64'));
+        await characteristic.writeValue(new Uint8Array([0x10, 0xFF, 0xF1, 0x45]));
+
+        log('Print job completed!');
+        showStatus('Print job sent successfully!');
+      } catch (error) {
+        showStatus('Print failed: ' + error.message, true);
+        log('Error: ' + error.message);
+      }
+    }
+
+    function hexStringToBytes(hex) {
+      const bytes = new Uint8Array(Math.ceil(hex.length / 2));
+      for (let i = 0; i < hex.length; i += 2) {
+        bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+      }
+      return bytes;
+    }
+
+    // Event Listeners
+    connectBtn.addEventListener('click', connectPrinter);
+
+    imageInput.addEventListener('change', async (e) => {
+      if (e.target.files[0]) {
+        const binStr = await processImage(e.target.files[0]);
+        imageData = (BigInt('0b' + binStr).toString(16));
+        showStatus('Image processed and ready to print!');
+      }
+    });
+
+    printBtn.addEventListener('click', async () => {
+      if (!imageData) {
+        showStatus('Please select an image first', true);
+        return;
+      }
+      await sendToPrinter(imageData);
+    });
+  </script>
+</body>
+
+</html>
