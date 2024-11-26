@@ -1,4 +1,3 @@
-from PIL import Image
 from printer import Printer
 
 if __name__ == "__main__":

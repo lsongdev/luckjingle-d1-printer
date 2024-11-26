@@ -1,9 +1,8 @@
-
-Luck Jingle Printer
+# Luck Jingle Printer
 
 <img width="300" src="https://ae01.alicdn.com/kf/Se12173c0674d4859a9c613cb259ff593k/LUCK-JINGLE-Sticker-Printer-Machine-Mini-Bluetooth-Inkless-Thermal-Photo-Printer-Compatible-with-Android-IOS.jpg" />
 
-[Buy now](https://mobile.yangkeduo.com/goods2.html?goods_id=215919711645)
+[[🛒 Buy now]](https://mobile.yangkeduo.com/goods2.html?goods_id=215919711645)
 
 ```shell
 ~$ bluetoothctl
@@ -14,6 +13,7 @@ Luck Jingle Printer
 [bluetoothctl]# pair <address>
 
 ~$ sudo rfcomm connect 1 <address>
+~$ pip install -r requirements.txt
 ~$ pip3 install pillow
 ~$ python3 main.py
 ```
