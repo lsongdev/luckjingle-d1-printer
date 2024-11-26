@@ -1,0 +1,113 @@
+<page>
+  <line>
+    <text align="center" font_size="28">快乐柠檬奶茶店</text>
+  </line>
+
+  <line>
+    <text align="center" font_size="14">Happy Lemon Milk Tea</text>
+  </line>
+
+  <line>
+    <hr style="dashed" thickness="1" />
+  </line>
+
+  <line>
+    <text align="left" font_size="14">单号：202504190001</text>
+  </line>
+
+  <line>
+    <text align="left" font_size="14">时间：2026-04-19 14:32:18</text>
+  </line>
+
+  <line>
+    <text align="left" font_size="14">收银员：张三</text>
+  </line>
+
+  <line>
+    <hr style="solid" thickness="1" />
+  </line>
+
+  <line>
+    <text width="200" align="left" font_size="14">商品名称</text>
+    <text width="60" align="center" font_size="14">数量</text>
+    <text width="80" align="right" font_size="14">金额</text>
+  </line>
+
+  <line>
+    <text width="200" align="left" font_size="14">珍珠奶茶(大杯)</text>
+    <text width="60" align="center" font_size="14">1</text>
+    <text width="80" align="right" font_size="14">18.00</text>
+  </line>
+
+  <line>
+    <text width="200" align="left" font_size="14">椰果奶茶(中杯)</text>
+    <text width="60" align="center" font_size="14">2</text>
+    <text width="80" align="right" font_size="14">32.00</text>
+  </line>
+
+  <line>
+    <text width="200" align="left" font_size="14">芝士草莓</text>
+    <text width="60" align="center" font_size="14">1</text>
+    <text width="80" align="right" font_size="14">24.00</text>
+  </line>
+
+  <line>
+    <hr style="solid" thickness="1" />
+  </line>
+
+  <line>
+    <text align="right" font_size="14">小计：74.00</text>
+  </line>
+
+  <line>
+    <text align="right" font_size="14">优惠：-5.00</text>
+  </line>
+
+  <line>
+    <text align="right" font_size="20">实付：69.00</text>
+  </line>
+
+  <line>
+    <hr style="solid" thickness="2" />
+  </line>
+
+  <line>
+    <text align="left" font_size="14">支付方式：微信支付</text>
+  </line>
+
+  <line>
+    <hr style="dotted" thickness="1" />
+  </line>
+
+  <line>
+    <barcode data="202504190001" type="code128" height="60" />
+  </line>
+
+  <line>
+    <text align="center" font_size="12">202504190001</text>
+  </line>
+
+  <line>
+    <qrcode data="https://luckjingle.com/pay/202504190001" size="150" />
+  </line>
+
+  <line>
+    <text align="center" font_size="12">扫码支付</text>
+  </line>
+
+  <line>
+    <hr style="solid" thickness="1" />
+  </line>
+
+  <line>
+    <text align="center" font_size="12">地址：XX市XX区XX路123号</text>
+  </line>
+
+  <line>
+    <text align="center" font_size="12">电话：138-0000-0000</text>
+  </line>
+
+  <line>
+    <text align="center" font_size="12">欢迎光临，谢谢惠顾！</text>
+  </line>
+</page>
