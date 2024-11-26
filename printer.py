@@ -74,7 +74,7 @@ class Printer:
         # disable shutdown
         self.device.write(bytes.fromhex("10FF120000"))
         
-    def print_text(self, text, font, font_size = 20):
+    def print_text(self, text, font="zpix.ttf", font_size = 20):
         font = ImageFont.truetype(font, font_size)
         content = ""
         line_length = 0
@@ -126,4 +126,8 @@ class Printer:
             if len(str) < 256:
                 str = str.ljust(256, "0")
             self.device.write(bytes.fromhex(str))
-    
+
+if __name__ == "__main__":
+    printer = Printer("/dev/rfcomm1")
+    # printer.print_image_file("cat.jpg")
+    printer.print_text("hello world\n\n\n")

@@ -13,9 +13,9 @@
 [bluetoothctl]# pair <address>
 
 ~$ sudo rfcomm connect 1 <address>
+~$ pip install pillow # or ...
 ~$ pip install -r requirements.txt
-~$ pip3 install pillow
-~$ python3 main.py
+~$ python3 printer.py
 ```
 
 Reference:
