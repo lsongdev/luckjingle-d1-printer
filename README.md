@@ -1,4 +1,4 @@
-# Luck Jingle Printer
+# LuckJingle Printer
 
 <img width="300" src="https://ae01.alicdn.com/kf/Se12173c0674d4859a9c613cb259ff593k/LUCK-JINGLE-Sticker-Printer-Machine-Mini-Bluetooth-Inkless-Thermal-Photo-Printer-Compatible-with-Android-IOS.jpg" />
 
@@ -14,7 +14,8 @@
 ## Example
 
 ```python
-import LuckPrinter from "luck_printer"
+import asyncio
+from luck_printer import LuckPrinter, BluetoothDevice
 
 async def main():
   # BLE示例 // run scan.py to get address
@@ -51,7 +52,7 @@ if __name__ == "__main__":
 ~$ sudo rfcomm connect 1 <address>
 ```
 
-Reference:
+## Credits
 
 + <https://github.com/LynMoe/DingdangD1-PoC>
 + <https://github.com/Lakr233/GGLyn>
