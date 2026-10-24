@@ -2,6 +2,7 @@
 """Luck Printer 核心模块"""
 
 import asyncio
+import sys
 from dither import applyDither
 from PIL import Image, ImageFont, ImageDraw
 
@@ -20,10 +21,51 @@ class BluetoothDevice:
 
     async def open(self):
         import bleak
-        self.client = bleak.BleakClient(self.address)
+        target = self.address
+
+        # On Linux, BlueZ may already know a paired device even when it is not
+        # advertising. Passing its DBus device record avoids Bleak's scan-first
+        # lookup while keeping address-based discovery on other platforms.
+        if sys.platform.startswith("linux"):
+            target = await self._known_bluez_device() or target
+
+        self.client = bleak.BleakClient(target)
         await self.client.connect()
         await self.client.start_notify(CHARACTERISTIC_1, self._notification_handler)
         await self.client.start_notify(CHARACTERISTIC_3, self._notification_handler)
+
+    async def _known_bluez_device(self):
+        try:
+            from bleak.backends.device import BLEDevice
+            from dbus_fast import BusType, Message
+            from dbus_fast.aio import MessageBus
+
+            bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+            try:
+                reply = await bus.call(Message(
+                    destination="org.bluez",
+                    path="/",
+                    interface="org.freedesktop.DBus.ObjectManager",
+                    member="GetManagedObjects",
+                ))
+                for path, interfaces in reply.body[0].items():
+                    properties = interfaces.get("org.bluez.Device1", {})
+                    address = properties.get("Address")
+                    if address and address.value.casefold() == self.address.casefold():
+                        details = {
+                            key: value.value for key, value in properties.items()
+                        }
+                        name = details.get("Name") or details.get("Alias") or self.address
+                        return BLEDevice(
+                            self.address, name, {"path": path, "props": details}
+                        )
+            finally:
+                bus.disconnect()
+        except Exception:
+            # Fall back to Bleak's normal address scan if BlueZ lookup is
+            # unavailable (for example, on a Linux system without system D-Bus).
+            return None
+        return None
 
     async def close(self):
         await self.client.disconnect()

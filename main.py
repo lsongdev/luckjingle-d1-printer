@@ -1,32 +1,58 @@
 import asyncio
+import argparse
+from pathlib import Path
+
+from PIL import Image
 from render import render
 from printer import BluetoothDevice, LuckPrinter
 
 
-async def main():
-    with open("receipt.xml", "r", encoding="utf-8") as f:
-        layout_xml = f.read()
+def parse_args():
+    parser = argparse.ArgumentParser(description="Print text, an image, or an XML layout.")
+    parser.add_argument(
+        "--device", default="02:34:6B:35:A0:E3",
+        help="Bluetooth printer address (default: %(default)s)",
+    )
+    commands = parser.add_subparsers(dest="command")
 
-    # BLE示例 // run scan.py to get address
-    # device = BluetoothDevice("028EBD80-9CCC-AD10-E727-8715AF47A664")
-    # device = BluetoothDevice("D3808B0D-2DDF-2E33-B434-8FC9576A2BBE")
-    device = BluetoothDevice("02:34:6B:35:A0:E3")
-    # device = BluetoothDevice("60:6E:41:62:DC:F4")
+    text_cmd = commands.add_parser("text", help="Print text")
+    text_cmd.add_argument("--device", default=argparse.SUPPRESS, help=argparse.SUPPRESS)
+    text_cmd.add_argument("content", help="Text to print; use quotes for spaces or newlines")
+    text_cmd.add_argument("--font-size", type=int, default=20)
 
-    # 串口示例
-    # from printer import SerialPortDevice
-    # device = SerialPortDevice("/dev/rfcomm1")
+    image_cmd = commands.add_parser("image", help="Print an image file")
+    image_cmd.add_argument("--device", default=argparse.SUPPRESS, help=argparse.SUPPRESS)
+    image_cmd.add_argument("file", type=Path)
 
+    xml_cmd = commands.add_parser("xml", help="Render and print an XML layout")
+    xml_cmd.add_argument("--device", default=argparse.SUPPRESS, help=argparse.SUPPRESS)
+    xml_cmd.add_argument("file", type=Path, nargs="?", default=Path("receipt.xml"))
+
+    args = parser.parse_args()
+    if args.command is None:
+        args.command = "xml"
+        args.file = Path("receipt.xml")
+    return args
+
+
+async def main(args):
+    device = BluetoothDevice(args.device)
     printer = LuckPrinter(device)
 
     try:
         await printer.initialize()
-        img = render(layout_xml)
-        await printer.print_image(img)
+        if args.command == "text":
+            await printer.print_text(args.content, font_size=args.font_size)
+        elif args.command == "image":
+            with Image.open(args.file) as img:
+                await printer.print_image(img)
+        else:
+            layout_xml = args.file.read_text(encoding="utf-8")
+            await printer.print_image(render(layout_xml))
         await printer.print_end()
     finally:
         await printer.close()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main(parse_args()))
