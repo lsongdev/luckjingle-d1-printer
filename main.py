@@ -9,7 +9,8 @@ async def main():
 
     # BLE示例 // run scan.py to get address
     # device = BluetoothDevice("028EBD80-9CCC-AD10-E727-8715AF47A664")
-    device = BluetoothDevice("D3808B0D-2DDF-2E33-B434-8FC9576A2BBE")
+    # device = BluetoothDevice("D3808B0D-2DDF-2E33-B434-8FC9576A2BBE")
+    device = BluetoothDevice("02:34:6B:35:A0:E3")
     # device = BluetoothDevice("60:6E:41:62:DC:F4")
 
     # 串口示例
